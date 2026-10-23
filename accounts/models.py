@@ -56,3 +56,12 @@ class Employee(models.Model):
 
     def __str__(self):
         return f"{self.full_name} ({self.get_role_display()})"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Роль задаётся группой и совпадает с полем role (раздел 8 ТЗ).
+        from django.contrib.auth.models import Group
+
+        groups = Group.objects.filter(name__in=ROLE_GROUPS)
+        self.user.groups.remove(*groups)
+        self.user.groups.add(*groups.filter(name=self.role))
