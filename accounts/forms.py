@@ -51,18 +51,55 @@ def clean_apartment(value):
 
 
 class RegistrationForm(forms.Form):
-    full_name = forms.CharField(label="ФИО", max_length=150)
-    phone = forms.CharField(label="Телефон", max_length=30)
-    email = forms.EmailField(label="E-mail")
+    full_name = forms.CharField(
+        label="ФИО",
+        max_length=150,
+        help_text="От 2 до 150 символов: только буквы, пробелы и дефис. Например: Иванов Иван Иванович",
+        error_messages={"required": "Укажите ФИО буквами"},
+    )
+    phone = forms.CharField(
+        label="Телефон",
+        max_length=30,
+        help_text="11 цифр, начинается с +7 или 8. Например: +7 900 000-00-00",
+        error_messages={"required": "Телефон в формате +7 900 000-00-00"},
+    )
+    email = forms.EmailField(
+        label="E-mail",
+        help_text="Станет вашим логином. На него придёт ссылка для подтверждения регистрации",
+        error_messages={
+            "required": "Укажите e-mail",
+            "invalid": "Укажите корректный e-mail, например: name@mail.ru",
+        },
+    )
     house = forms.ModelChoiceField(
         label="Дом",
         queryset=House.objects.none(),
         empty_label="— выберите дом —",
         error_messages={"required": "Выберите дом из списка", "invalid_choice": "Выберите дом из списка"},
     )
-    apartment = forms.CharField(label="Квартира", max_length=10)
-    password1 = forms.CharField(label="Пароль", widget=forms.PasswordInput, strip=False)
-    password2 = forms.CharField(label="Повтор пароля", widget=forms.PasswordInput, strip=False)
+    apartment = forms.CharField(
+        label="Квартира",
+        max_length=10,
+        help_text="До 10 символов: цифры, буквы и «/». Например: 12, 12а, 12/2",
+        error_messages={"required": "Укажите номер квартиры"},
+    )
+    password1 = forms.CharField(
+        label="Пароль",
+        widget=forms.PasswordInput,
+        strip=False,
+        help_text=(
+            "Не короче 8 символов; не только цифры; не из списка простых паролей "
+            "(например, 12345678 или password); не похож на e-mail и не совпадает с ним"
+        ),
+        error_messages={"required": "Придумайте пароль"},
+    )
+    password2 = forms.CharField(
+        label="Повтор пароля",
+        widget=forms.PasswordInput,
+        strip=False,
+        help_text="Введите тот же пароль ещё раз",
+        error_messages={"required": "Повторите пароль"},
+    )
     consent = forms.BooleanField(
         label="Согласен на обработку персональных данных (152-ФЗ)",
         error_messages={"required": "Без согласия на обработку данных регистрация невозможна"},
@@ -93,7 +130,7 @@ class RegistrationForm(forms.Form):
         p1, p2 = cleaned.get("password1"), cleaned.get("password2")
         if p1 and p2:
             if p1 != p2:
-                self.add_error("password2", "Пароли не совпадают")
+                self.add_error("password2", "Пароли не совпадают: введите один и тот же пароль дважды")
             elif p1.lower() == (cleaned.get("email") or "").lower():
                 self.add_error("password1", "Пароль не должен совпадать с e-mail")
             else:
@@ -105,8 +142,21 @@ class RegistrationForm(forms.Form):
 
 
 class LoginForm(forms.Form):
-    email = forms.EmailField(label="E-mail")
-    password = forms.CharField(label="Пароль", widget=forms.PasswordInput, strip=False)
+    email = forms.EmailField(
+        label="E-mail",
+        help_text="Тот же адрес, с которым вы регистрировались",
+        error_messages={
+            "required": "Укажите e-mail",
+            "invalid": "Укажите корректный e-mail, например: name@mail.ru",
+        },
+    )
+    password = forms.CharField(
+        label="Пароль",
+        widget=forms.PasswordInput,
+        strip=False,
+        help_text="После 5 неверных попыток подряд вход блокируется на 15 минут",
+        error_messages={"required": "Введите пароль"},
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

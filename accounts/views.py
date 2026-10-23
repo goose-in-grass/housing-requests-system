@@ -57,7 +57,7 @@ def _lock_key(email):
 def login_view(request):
     if request.user.is_authenticated:
         return redirect("home")
-    form = LoginForm(request.POST or None)
+    form = LoginForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
         email = form.cleaned_data["email"].strip().lower()
         if cache.get(_lock_key(email)):
@@ -71,13 +71,16 @@ def login_view(request):
                     cache.set(_lock_key(email), True, LOCK_SECONDS)
                     cache.delete(_attempt_key(email))
                     logger.warning("Блокировка входа на 15 минут: %s", email)
-                inactive = User.objects.filter(username=email, is_active=False).exists()
-                form.add_error(
-                    None,
-                    "Подтвердите e-mail по ссылке из письма или обратитесь в УК"
-                    if inactive
-                    else "Неверный e-mail или пароль",
-                )
+                if User.objects.filter(username=email, is_active=False).exists():
+                    message = "Подтвердите e-mail по ссылке из письма или обратитесь в УК"
+                elif attempts >= MAX_ATTEMPTS:
+                    message = "Неверный пароль. Вход заблокирован на 15 минут"
+                else:
+                    left = MAX_ATTEMPTS - attempts
+                    message = (
+                        f"Неверный e-mail или пароль. Осталось попыток до блокировки на 15 минут: {left}"
+                    )
+                form.add_error(None, message)
             else:
                 cache.delete(_attempt_key(email))
                 login(request, user)
@@ -106,7 +109,7 @@ def _send_confirmation(request, user):
 def register(request):
     if request.user.is_authenticated:
         return redirect("home")
-    form = RegistrationForm(request.POST or None)
+    form = RegistrationForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         with transaction.atomic():

@@ -103,12 +103,15 @@ def create(request):
         resident = get_object_or_404(Resident, user=request.user)
 
     show_form = resident is not None or new_mode
+    is_post = request.method == "POST"
     ticket_form = (
-        TicketCreateForm(request.POST or None, request.FILES or None, is_dispatcher=is_dispatcher)
+        TicketCreateForm(
+            request.POST if is_post else None, request.FILES if is_post else None, is_dispatcher=is_dispatcher
+        )
         if show_form
         else None
     )
-    new_form = NewResidentForm(request.POST or None) if new_mode else None
+    new_form = NewResidentForm(request.POST if is_post else None) if new_mode else None
 
     if request.method == "POST" and show_form:
         valid = ticket_form.is_valid() and (new_form is None or new_form.is_valid())
