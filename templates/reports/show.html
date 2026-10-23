@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{{ title }}</h1>
+<ul class="nav nav-pills mb-3">
+  {% for c, t in reports %}<li class="nav-item"><a class="nav-link {% if c == code %}active{% endif %}" href="{% url 'reports:show' c %}">{{ t }}</a></li>{% endfor %}
+</ul>
+<form method="get" class="row g-2 mb-3">
+  {% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+  {% for field in form %}<div class="col-6 col-md-2"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+  <div class="col-12">
+    <button class="btn btn-primary">Показать</button>
+    {% if result %}<button class="btn btn-outline-success" name="export" value="xlsx">Выгрузить в Excel</button>{% endif %}
+  </div>
+</form>
+{% if result %}
+  {% if result.chart %}
+  <div class="mb-4" style="max-width:800px"><canvas id="chart" aria-label="График"></canvas></div>
+  {{ result.chart|json_script:"chart-data" }}
+  {% endif %}
+  <div class="table-responsive">
+  <table class="table table-sm table-striped">
+    <thead><tr>{% for h in result.headers %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in result.rows %}
+      <tr {% if result.total_row and forloop.last %}class="fw-bold"{% endif %}>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+      {% empty %}<tr><td colspan="{{ result.headers|length }}" class="text-center text-muted">Нет данных</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if result.chart %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  var cfg = JSON.parse(document.getElementById("chart-data").textContent);
+  new Chart(document.getElementById("chart"), {
+    type: cfg.type,
+    data: {labels: cfg.labels, datasets: cfg.datasets},
+    options: {scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}
+  });
+</script>
+{% endif %}
+{% endblock %}

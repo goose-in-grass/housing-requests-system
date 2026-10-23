@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Отчёты{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Отчёты по участку</h1>
+<div class="list-group">
+  {% for code, title in reports %}
+  <a class="list-group-item list-group-item-action" href="{% url 'reports:show' code %}">{{ title }}</a>
+  {% endfor %}
+</div>
+{% endblock %}
