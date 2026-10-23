@@ -44,6 +44,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "accounts.context.current_role",
             ],
         },
     },
@@ -86,3 +87,17 @@ EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.conso
 DEFAULT_FROM_EMAIL = "noreply@uk.local"
 
 SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
+
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "home"
+PASSWORD_RESET_TIMEOUT = 24 * 3600
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 30 * 1024 * 1024
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "root": {"handlers": ["console"], "level": "INFO"},
+}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Проверьте почту{% endblock %}
+{% block content %}
+<h1 class="h3">Проверьте почту</h1>
+<p>Мы отправили письмо на {{ email }}. Перейдите по ссылке в письме, чтобы завершить регистрацию.</p>
+<a class="btn btn-primary" href="{% url 'accounts:login' %}">К странице входа</a>
+{% endblock %}

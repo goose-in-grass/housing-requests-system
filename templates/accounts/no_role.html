@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Нет доступа{% endblock %}
+{% block content %}
+<h1 class="h3">Нет доступа</h1>
+<p>Для вашей учётной записи не назначена роль или сотрудник заблокирован. Обратитесь к администратору.</p>
+<form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="btn btn-outline-secondary">Выйти</button></form>
+{% endblock %}

@@ -1,0 +1,4 @@
+.row-overdue > td { background-color: #f8d7da !important; }
+.row-soon > td { background-color: #fff3cd !important; }
+.badge-emergency { background-color: #dc3545; }
+.form-errors { color: #dc3545; font-size: .875em; }
