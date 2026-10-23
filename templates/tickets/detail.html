@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Заявка № {{ ticket.number }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h3 mb-0">Заявка № {{ ticket.number }}</h1>
+  <div>{% with t=ticket %}{% include "tickets/_status.html" %}{% endwith %}</div>
+</div>
+
+{% if master_unavailable %}<div class="alert alert-danger">Мастер недоступен (заблокирован). Переназначьте заявку.</div>{% endif %}
+{% if ticket.emergency_requested and ticket.priority != 'emergency' and ticket.status == 'new' %}
+<div class="alert alert-warning">Жилец отметил «Это авария». Решение о приоритете за диспетчером.</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <dl class="row">
+      <dt class="col-sm-4">Категория</dt><dd class="col-sm-8">{{ ticket.category.name }}</dd>
+      <dt class="col-sm-4">Адрес</dt><dd class="col-sm-8">{{ ticket.house.address }}, кв. {{ ticket.apartment }}</dd>
+      <dt class="col-sm-4">Подана</dt><dd class="col-sm-8">{{ ticket.created_at|date:"d.m.Y H:i" }} ({{ ticket.get_source_display }})</dd>
+      <dt class="col-sm-4">Срок выполнения</dt><dd class="col-sm-8">{{ ticket.deadline_at|date:"d.m.Y H:i"|default:"назначается при принятии" }}</dd>
+      <dt class="col-sm-4">Мастер</dt><dd class="col-sm-8">{{ ticket.master.full_name|default:"не назначен" }}</dd>
+      {% if show_phone %}
+      <dt class="col-sm-4">Жилец</dt><dd class="col-sm-8">{{ ticket.resident.full_name }}, {{ ticket.resident.phone }}</dd>
+      {% endif %}
+      {% if ticket.reject_reason %}<dt class="col-sm-4">Причина отказа</dt><dd class="col-sm-8">{{ ticket.reject_reason }}</dd>{% endif %}
+      {% if ticket.rating %}<dt class="col-sm-4">Оценка</dt><dd class="col-sm-8">{{ ticket.rating }} из 5{% if ticket.rating_comment %} — {{ ticket.rating_comment }}{% endif %}</dd>{% endif %}
+    </dl>
+    <h2 class="h6">Описание</h2>
+    <p style="white-space: pre-line">{{ ticket.description }}</p>
+
+    {% if photos_before %}
+    <h2 class="h6">Фото «до»</h2>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      {% for p in photos_before %}<a href="{% url 'tickets:photo' p.pk %}" target="_blank"><img src="{% url 'tickets:photo' p.pk %}" alt="Фото до" class="img-thumbnail" style="max-height:140px"></a>{% endfor %}
+    </div>
+    {% endif %}
+    {% if photos_after %}
+    <h2 class="h6">Фото «после»</h2>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      {% for p in photos_after %}<a href="{% url 'tickets:photo' p.pk %}" target="_blank"><img src="{% url 'tickets:photo' p.pk %}" alt="Фото после" class="img-thumbnail" style="max-height:140px"></a>{% endfor %}
+    </div>
+    {% endif %}
+
+    <h2 class="h6 mt-4">История статусов</h2>
+    <table class="table table-sm">
+      <thead><tr><th>Когда</th><th>Кто</th><th>Событие</th><th>Комментарий</th></tr></thead>
+      <tbody>
+      {% for h in history %}
+        <tr>
+          <td>{{ h.changed_at|date:"d.m.Y H:i" }}</td>
+          <td>{{ h.changed_by.employee.full_name|default:h.changed_by.resident.full_name|default:h.changed_by.username }}</td>
+          <td>
+            {% if h.event == 'status' %}{% if h.old_status %}{{ h.get_old_status_display }} → {% endif %}{{ h.get_new_status_display }}
+            {% elif h.event == 'assign' %}Мастер: {% if h.old_value %}{{ h.old_value }} → {% endif %}{{ h.new_value }}
+            {% elif h.event == 'priority' %}Приоритет: {{ h.old_value }} → {{ h.new_value }}
+            {% else %}{{ h.get_event_display }}{% endif %}
+          </td>
+          <td>{{ h.comment }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col-lg-5">
+    {% if actions %}<h2 class="h6">Действия</h2>{% endif %}
+
+    {% if 'accepted' in actions %}
+    <form method="post" action="{% url 'tickets:action' ticket.pk 'accept' %}" class="card card-body mb-3">
+      {% csrf_token %}<input type="hidden" name="version" value="{{ ticket.version }}">
+      <label class="form-label">Мастер</label>
+      <select name="master" class="form-select mb-2" required>
+        <option value="">— выберите мастера —</option>
+        {% for m in masters %}<option value="{{ m.pk }}">{{ m.full_name }} (активных: {{ m.active_count }})</option>{% endfor %}
+      </select>
+      <label class="form-label">Приоритет</label>
+      <select name="priority" class="form-select mb-2">
+        {% for value, label in priorities %}<option value="{{ value }}"{% if value == ticket.priority %} selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <button class="btn btn-success" type="submit">Принять заявку</button>
+    </form>
+    {% endif %}
+
+    {% if 'rejected' in actions %}
+    <form method="post" action="{% url 'tickets:action' ticket.pk 'reject' %}" class="card card-body mb-3" data-confirm="Отклонить заявку?">
+      {% csrf_token %}<input type="hidden" name="version" value="{{ ticket.version }}">
+      <label class="form-label">Причина отказа (от 10 символов)</label>
+      <textarea name="reason" class="form-control mb-2" rows="2" required></textarea>
+      <button class="btn btn-outline-danger" type="submit">Отклонить</button>
+    </form>
+    {% endif %}
+
+    {% if 'cancelled' in actions %}
+    <form method="post" action="{% url 'tickets:action' ticket.pk 'cancel' %}" class="mb-3" data-confirm="Отменить заявку? Это действие необратимо.">
+      {% csrf_token %}<input type="hidden" name="version" value="{{ ticket.version }}">
+      <button class="btn btn-outline-secondary" type="submit">Отозвать заявку</button>
+    </form>
+    {% endif %}
+
+    {% if 'in_progress' in actions and ticket.status == 'accepted' %}
+    <form method="post" action="{% url 'tickets:action' ticket.pk 'start' %}" class="mb-3">
+      {% csrf_token %}<input type="hidden" name="version" value="{{ ticket.version }}">
+      <button class="btn btn-primary" type="submit">Взять в работу</button>
+    </form>
+    {% endif %}
+
+    {% if 'done' in actions %}
+    <form method="post" enctype="multipart/form-data" action="{% url 'tickets:action' ticket.pk 'done' %}" class="card card-body mb-3">
+      {% csrf_token %}<input type="hidden" name="version" value="{{ ticket.version }}">
+      <label class="form-label">Фото «после» (обязательно)</label>
+      <input type="file" name="photos" class="form-control mb-2" accept="image/jpeg,image/png,image/webp" capture="environment" multiple required>
+      <label class="form-label">Комментарий</label>
+      <textarea name="comment" class="form-control mb-2" rows="2" maxlength="500"></textarea>
+      <button class="btn btn-success" type="submit">Отметить выполненной</button>
+    </form>
+    {% endif %}
+
+    {% if 'closed' in actions %}
+    <form method="post" action="{% url 'tickets:action' ticket.pk 'close' %}" class="card card-body mb-3">
+      {% csrf_token %}<input type="hidden" name="version" value="{{ ticket.version }}">
+      <label class="form-label">Оценка работы</label>
+      <select name="rating" class="form-select mb-2" required>
+        <option value="">— поставьте оценку —</option>
+        {% for i in "54321" %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+      </select>
+      <label class="form-label">Комментарий</label>
+      <textarea name="comment" class="form-control mb-2" rows="2" maxlength="500"></textarea>
+      <button class="btn btn-success" type="submit">Подтвердить выполнение</button>
+    </form>
+    <form method="post" action="{% url 'tickets:action' ticket.pk 'return' %}" class="card card-body mb-3">
+      {% csrf_token %}<input type="hidden" name="version" value="{{ ticket.version }}">
+      <label class="form-label">Почему работа не принята</label>
+      <textarea name="comment" class="form-control mb-2" rows="2" maxlength="500" required></textarea>
+      <button class="btn btn-outline-warning" type="submit">Вернуть в работу</button>
+    </form>
+    {% endif %}
+
+    {% if 'assign' in actions %}
+    <form method="post" action="{% url 'tickets:action' ticket.pk 'assign' %}" class="card card-body mb-3">
+      {% csrf_token %}<input type="hidden" name="version" value="{{ ticket.version }}">
+      <label class="form-label">Сменить мастера</label>
+      <select name="master" class="form-select mb-2" required>
+        <option value="">— выберите мастера —</option>
+        {% for m in masters %}{% if m.pk != ticket.master_id %}<option value="{{ m.pk }}">{{ m.full_name }} (активных: {{ m.active_count }})</option>{% endif %}{% endfor %}
+      </select>
+      <textarea name="comment" class="form-control mb-2" rows="2" maxlength="500" placeholder="Комментарий{% if ticket.status == 'in_progress' %} (обязателен){% endif %}"></textarea>
+      <button class="btn btn-outline-primary" type="submit">Назначить</button>
+    </form>
+    {% endif %}
+
+    {% if 'priority' in actions %}
+    <form method="post" action="{% url 'tickets:action' ticket.pk 'priority' %}" class="card card-body mb-3">
+      {% csrf_token %}<input type="hidden" name="version" value="{{ ticket.version }}">
+      <label class="form-label">Приоритет</label>
+      <select name="priority" class="form-select mb-2">
+        {% for value, label in priorities %}{% if value != ticket.priority %}<option value="{{ value }}">{{ label }}</option>{% endif %}{% endfor %}
+      </select>
+      <textarea name="comment" class="form-control mb-2" rows="2" maxlength="500" placeholder="Комментарий"></textarea>
+      <button class="btn btn-outline-primary" type="submit">Изменить приоритет</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

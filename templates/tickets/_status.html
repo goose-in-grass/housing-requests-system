@@ -1,0 +1,5 @@
+<span class="badge {% if t.status == 'new' %}text-bg-secondary{% elif t.status == 'accepted' %}text-bg-info{% elif t.status == 'in_progress' %}text-bg-primary{% elif t.status == 'done' %}text-bg-warning{% elif t.status == 'closed' %}text-bg-success{% else %}text-bg-dark{% endif %}">{{ t.get_status_display }}</span>
+{% if t.priority == 'emergency' %}<span class="badge badge-emergency">Аварийная</span>{% endif %}
+{% with state=t.deadline_state %}
+{% if state == 'overdue' %}<span class="badge text-bg-danger">Просрочена</span>{% elif state == 'soon' %}<span class="badge text-bg-warning">Скоро срок</span>{% endif %}
+{% endwith %}

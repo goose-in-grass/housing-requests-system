@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 
 def photo_upload_path(instance, filename):
@@ -76,6 +77,7 @@ class Ticket(models.Model):
         "Оценка", null=True, blank=True, validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
     rating_comment = models.TextField("Комментарий к оценке", max_length=500, blank=True)
+    emergency_requested = models.BooleanField("Жилец отметил «Это авария»", default=False)
     version = models.PositiveIntegerField("Версия", default=1)
 
     class Meta:
@@ -96,6 +98,25 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"Заявка № {self.number}"
+
+    @property
+    def deadline_state(self):
+        """'overdue' / 'soon' / '' — вычисляется по текущему времени, а не хранится (раздел 7 ТЗ)."""
+        if self.deadline_at is None or self.status not in OVERDUE_STATUSES:
+            return ""
+        now = timezone.now()
+        if now > self.deadline_at:
+            return "overdue"
+        total = self.deadline_at - (self.accepted_at or self.created_at)
+        if total.total_seconds() > 0 and (self.deadline_at - now) < total * 0.25:
+            return "soon"
+        return ""
+
+    @property
+    def overdue_hours(self):
+        if self.deadline_state != "overdue":
+            return 0
+        return int((timezone.now() - self.deadline_at).total_seconds() // 3600)
 
 
 class TicketCounter(models.Model):

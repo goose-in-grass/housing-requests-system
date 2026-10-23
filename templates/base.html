@@ -22,7 +22,9 @@
           <li class="nav-item"><a class="nav-link" href="{% url 'tickets:create' %}">Новая заявка</a></li>
         {% elif role == 'dispatcher' or role == 'chief' %}
           <li class="nav-item"><a class="nav-link" href="{% url 'tickets:queue' %}">Очередь заявок</a></li>
+          {% if role == 'dispatcher' %}
           <li class="nav-item"><a class="nav-link" href="{% url 'tickets:create' %}">Заявка по звонку</a></li>
+          {% endif %}
           {% if role == 'chief' %}
           <li class="nav-item"><a class="nav-link" href="{% url 'reports:index' %}">Отчёты</a></li>
           {% endif %}

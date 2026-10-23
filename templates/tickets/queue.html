@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Очередь заявок{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Очередь заявок</h1>
+<form method="get" class="row g-2 mb-3">
+  <div class="col-6 col-md-2">{{ form.status }}</div>
+  <div class="col-6 col-md-2">{{ form.house }}</div>
+  <div class="col-6 col-md-2">{{ form.category }}</div>
+  <div class="col-6 col-md-2">{{ form.priority }}</div>
+  <div class="col-6 col-md-2">{{ form.master }}</div>
+  <div class="col-6 col-md-2">{{ form.q }}</div>
+  <div class="col-12"><button class="btn btn-outline-primary">Применить</button>
+    <a class="btn btn-link" href="{% url 'tickets:queue' %}">Сбросить</a></div>
+</form>
+{% include "tickets/_table.html" with show_master=True %}
+{% endblock %}

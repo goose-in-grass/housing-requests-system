@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Мои задачи{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Мои задачи</h1>
+{% include "tickets/_table.html" with empty_text="Назначенных заявок нет" %}
+{% endblock %}

@@ -1,0 +1,24 @@
+<div class="table-responsive">
+<table class="table table-hover align-middle">
+  <thead><tr>
+    <th>Номер</th><th>Дата</th><th>Категория</th><th>Адрес</th><th>Статус</th><th>Срок</th>
+    {% if show_master %}<th>Мастер</th>{% endif %}
+  </tr></thead>
+  <tbody>
+  {% for t in page %}
+    <tr class="{% if t.deadline_state == 'overdue' %}row-overdue{% elif t.deadline_state == 'soon' %}row-soon{% endif %}">
+      <td><a href="{% url 'tickets:detail' t.pk %}">{{ t.number }}</a></td>
+      <td>{{ t.created_at|date:"d.m.Y H:i" }}</td>
+      <td>{{ t.category.name }}</td>
+      <td>{{ t.house.address }}, кв. {{ t.apartment }}</td>
+      <td>{% include "tickets/_status.html" %}{% if t.emergency_requested and t.priority != 'emergency' and t.status == 'new' %} <span class="badge text-bg-warning">Жилец отметил аварию</span>{% endif %}</td>
+      <td>{{ t.deadline_at|date:"d.m.Y H:i"|default:"—" }}</td>
+      {% if show_master %}<td>{% if t.master %}{{ t.master.full_name }}{% if not t.master.is_active %} <span class="badge text-bg-danger">мастер недоступен</span>{% endif %}{% else %}—{% endif %}</td>{% endif %}
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" class="text-center text-muted py-4">{{ empty_text|default:"Заявок нет" }}{% if empty_action %}<div class="mt-2">{{ empty_action }}</div>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% include "tickets/_pagination.html" %}

@@ -121,6 +121,9 @@ def _locked_ticket(user, ticket_id, version=None):
 
 def _check_transition(user, ticket, new_status):
     role = get_role(user)
+    # Роль, которой такой переход не положен ни из какого статуса (подделанный запрос), получает 403.
+    if not any(role in roles for (_, dst), roles in TRANSITIONS.items() if dst == new_status):
+        raise PermissionDenied("Недостаточно прав")
     allowed = TRANSITIONS.get((Status(ticket.status), new_status))
     if allowed is None:
         raise InvalidTransition("Недопустимый переход статуса")
@@ -179,7 +182,9 @@ def _master_label(master):
 
 
 @transaction.atomic
-def create_ticket(user, resident, category, description, photos=(), priority=Priority.NORMAL):
+def create_ticket(
+    user, resident, category, description, photos=(), priority=Priority.NORMAL, emergency_requested=False
+):
     """Подача заявки жильцом или диспетчером по звонку (FR-R1, FR-D2, FR-C1)."""
     role = _require_role(user, ROLE_RESIDENT, ROLE_DISPATCHER)
     if role == ROLE_RESIDENT:
@@ -210,6 +215,7 @@ def create_ticket(user, resident, category, description, photos=(), priority=Pri
         apartment=resident.apartment,
         description=description,
         priority=priority,
+        emergency_requested=emergency_requested,
     )
     _attach_photos(ticket, user, photos, Photo.Kind.BEFORE)
     _history(ticket, user, StatusHistory.Event.STATUS, new_status=Status.NEW, comment="Заявка подана")

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Новая заявка{% endblock %}
+{% block content %}
+<div class="row justify-content-center"><div class="col-lg-8">
+<h1 class="h3 mb-3">{% if is_dispatcher %}Заявка по звонку{% else %}Новая заявка{% endif %}</h1>
+
+{% if is_dispatcher and not ticket_form %}
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-sm-8">{{ search_form.q }}</div>
+    <div class="col-sm-4"><button class="btn btn-outline-primary">Найти жильца</button></div>
+  </form>
+  {% if found %}
+  <div class="list-group mb-3">
+    {% for r in found %}
+    <a class="list-group-item list-group-item-action" href="?resident={{ r.pk }}">{{ r }} · {{ r.phone }}</a>
+    {% endfor %}
+  </div>
+  {% elif search_form.q.value %}<p class="text-muted">Жилец не найден.</p>{% endif %}
+  <a class="btn btn-secondary" href="?new=1">Создать карточку нового жильца</a>
+{% else %}
+  {% if resident %}
+  <p class="text-muted">Адрес: {{ resident.house.address }}, кв. {{ resident.apartment }}{% if is_dispatcher %} · {{ resident.full_name }}, {{ resident.phone }}{% endif %}</p>
+  {% endif %}
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {% if resident %}<input type="hidden" name="resident" value="{{ resident.pk }}">{% endif %}
+    {% if new_mode %}
+      <input type="hidden" name="new" value="1">
+      <h2 class="h5">Жилец</h2>
+      {% for field in new_form %}{% include "_field.html" %}{% endfor %}
+      <h2 class="h5">Заявка</h2>
+    {% endif %}
+    {% for error in ticket_form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+    {% for field in ticket_form %}
+      {% if field.name == 'emergency' %}
+      <div class="form-check mb-3">{{ field }} <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        <div class="form-text">Окончательное решение о приоритете принимает диспетчер.</div></div>
+      {% else %}{% include "_field.html" %}{% endif %}
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">Отправить</button>
+    <a class="btn btn-link" href="{% if is_dispatcher %}{% url 'tickets:create' %}{% else %}{% url 'tickets:my' %}{% endif %}">Отмена</a>
+  </form>
+{% endif %}
+</div></div>
+{% endblock %}
