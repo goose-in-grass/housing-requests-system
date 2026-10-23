@@ -84,3 +84,5 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Прототип: письма печатаются в консоль; в полной версии — SMTP заказчика.
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = "noreply@uk.local"
+
+SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")

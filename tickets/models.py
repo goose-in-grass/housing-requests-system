@@ -1,7 +1,16 @@
+import os
+import uuid
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
+
+
+def photo_upload_path(instance, filename):
+    """Случайное имя файла на диске (UUID), расширение сохраняется."""
+    ext = os.path.splitext(filename)[1].lower()[:5]
+    return f"photos/{uuid.uuid4().hex}{ext}"
 
 
 class Status(models.TextChoices):
@@ -139,7 +148,7 @@ class Photo(models.Model):
 
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name="photos")
     kind = models.CharField("Тип", max_length=10, choices=Kind.choices)
-    file = models.ImageField("Файл", upload_to="photos/%Y/%m/")
+    file = models.ImageField("Файл", upload_to=photo_upload_path)
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
