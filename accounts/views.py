@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .forms import LoginForm, RegistrationForm
+from .forms import LoginForm, RegistrationForm, resolve_house
 from .models import ROLE_CHIEF, ROLE_DISPATCHER, ROLE_MASTER, ROLE_RESIDENT, Resident
 from .roles import get_role
 
@@ -125,7 +125,7 @@ def register(request):
             resident.user = user
             resident.full_name = data["full_name"]
             resident.email = data["email"]
-            resident.house = data["house"]
+            resident.house = resolve_house(data)
             resident.apartment = data["apartment"]
             resident.consent_at = timezone.now()
             resident.save()

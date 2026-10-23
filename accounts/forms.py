@@ -74,8 +74,19 @@ class RegistrationForm(forms.Form):
     house = forms.ModelChoiceField(
         label="Дом",
         queryset=House.objects.none(),
-        empty_label="— выберите дом —",
-        error_messages={"required": "Выберите дом из списка", "invalid_choice": "Выберите дом из списка"},
+        required=False,
+        empty_label="— выберите дом из списка —",
+        help_text="Если вашего дома нет в списке, оставьте поле пустым и укажите адрес ниже",
+        error_messages={"invalid_choice": "Выберите дом из списка"},
+    )
+    custom_address = forms.CharField(
+        label="Свой адрес (если дома нет в списке)",
+        max_length=255,
+        required=False,
+        help_text=(
+            "Город, улица, номер дома. Например: г. Калининград, ул. Мира, 5. "
+            "Диспетчер закрепит дом за участком"
+        ),
     )
     apartment = forms.CharField(
         label="Квартира",
@@ -119,6 +130,12 @@ class RegistrationForm(forms.Form):
     def clean_apartment(self):
         return clean_apartment(self.cleaned_data["apartment"])
 
+    def clean_custom_address(self):
+        address = " ".join((self.cleaned_data.get("custom_address") or "").split())
+        if address and not 5 <= len(address) <= 255:
+            raise ValidationError("Укажите адрес полностью: город, улица, дом (от 5 символов)")
+        return address
+
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
         if User.objects.filter(username__iexact=email).exists():
@@ -127,6 +144,18 @@ class RegistrationForm(forms.Form):
 
     def clean(self):
         cleaned = super().clean()
+        house, address = cleaned.get("house"), cleaned.get("custom_address")
+        if not self.errors.get("house") and not self.errors.get("custom_address"):
+            if house and address:
+                self.add_error(
+                    "custom_address", "Выберите дом из списка или укажите свой адрес, но не оба сразу"
+                )
+            elif not house and not address:
+                self.add_error("house", "Выберите дом из списка или укажите свой адрес")
+            elif address:
+                existing = House.objects.filter(address__iexact=address).first()
+                if existing is not None and not existing.is_active:
+                    self.add_error("custom_address", "Этот дом не обслуживается управляющей компанией")
         p1, p2 = cleaned.get("password1"), cleaned.get("password2")
         if p1 and p2:
             if p1 != p2:
@@ -139,6 +168,27 @@ class RegistrationForm(forms.Form):
                 except ValidationError as exc:
                     self.add_error("password1", exc)
         return cleaned
+
+
+UNASSIGNED_SECTION = "Не распределён"
+
+
+def resolve_house(cleaned):
+    """Дом из списка или новый по введённому адресу.
+
+    Дом по своему адресу создаётся в участке «Не распределён»: диспетчер видит такие
+    заявки и закрепляет дом за участком в админке.
+    """
+    from directory.models import Section
+
+    if cleaned.get("house"):
+        return cleaned["house"]
+    address = cleaned["custom_address"]
+    existing = House.objects.filter(address__iexact=address).first()
+    if existing is not None:
+        return existing
+    section, _ = Section.objects.get_or_create(name=UNASSIGNED_SECTION)
+    return House.objects.create(address=address, section=section)
 
 
 class LoginForm(forms.Form):
